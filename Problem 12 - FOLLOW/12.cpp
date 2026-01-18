@@ -7,52 +7,65 @@ map<string, set<string>> FOLLOW;
 set<string> terminals;
 set<string> nonTerminals;
 
-bool isTerminal(string s) { return terminals.count(s); }
+bool isTerminal(string s) {
+    return terminals.count(s);
+}
+
+vector<string> splitSymbols(string prod) {
+    vector<string> symbols;
+    string temp;
+    for (char ch : prod) {
+        if (ch == ' ') {
+            if (!temp.empty()) {
+                symbols.push_back(temp);
+                temp.clear();
+            }
+        } else {
+            temp += ch;
+        }
+    }
+    if (!temp.empty()) 
+        symbols.push_back(temp);
+    return symbols;
+}
 
 void computeFollow() {
-    bool changed = true;
-
     string startSymbol = "E";
     FOLLOW[startSymbol].insert("$");
+    bool changed = true;
 
     while (changed) {
         changed = false;
+        for (auto& pair : productions) {
+            string lhs = pair.first;
 
-        for (auto &prodPair : productions) {
-            string lhs = prodPair.first;
+            for (string rhs : pair.second) {
+                vector<string> symbols = splitSymbols(rhs);
+                
+                int n = symbols.size();
+                for (int i = 0; i < n; ++i) {
+                    string B = symbols[i];
+                    if (!nonTerminals.count(B)) 
+                        continue;
+                        
+                    set<string> before = FOLLOW[B];
 
-            for (string rhs : prodPair.second) {
-                int len = rhs.size();
-
-                for (int i = 0; i < len; i++) {
-                    string B(1, rhs[i]);
-
-                    if (nonTerminals.count(B)) { 
-                        set<string> followB = FOLLOW[B];
-                        bool epsInNext = false;
-
-                        for (int j = i + 1; j < len; j++) {
-                            string next(1, rhs[j]);
-                            set<string> firstNext = FIRST[next];
-
-                            for (string s : firstNext)
-                                if (s != "eps") FOLLOW[B].insert(s);
-
-                            if (firstNext.find("eps") != firstNext.end())
-                                epsInNext = true;
-                            else {
-                                epsInNext = false;
-                                break;
-                            }
+                    bool allEps = true;
+                    for (int j = i + 1; j < n; ++j) {
+                        for (string s : FIRST[symbols[j]])
+                            if (s != "eps") 
+                                FOLLOW[B].insert(s);
+                        if (FIRST[symbols[j]].count("eps") == 0) {
+                            allEps = false;
+                            break;
                         }
-
-                        if (i == len - 1 || epsInNext) {
-                            for (string s : FOLLOW[lhs]) FOLLOW[B].insert(s);
-                        }
-
-                        if (FOLLOW[B].size() != followB.size())
-                            changed = true;
                     }
+                    if (i == n - 1 || allEps) {
+                        for (string s : FOLLOW[lhs])
+                            FOLLOW[B].insert(s);
+                    }
+                    if (FOLLOW[B].size() != before.size())
+                        changed = true;
                 }
             }
         }
@@ -60,11 +73,11 @@ void computeFollow() {
 }
 
 int main() {
-    productions["E"]  = {"TE'"};
-    productions["E'"] = {"+TE'", "eps"};
-    productions["T"]  = {"FT'"};
-    productions["T'"] = {"*FT'", "eps"};
-    productions["F"]  = {"(E)", "id"};
+    productions["E"]  = {"T E'"};
+    productions["E'"] = {"+ T E'", "eps"};
+    productions["T"]  = {"F T'"};
+    productions["T'"] = {"* F T'", "eps"};
+    productions["F"]  = {"( E )", "id"};
 
     nonTerminals = {"E", "E'", "T", "T'", "F"};
     terminals = {"+", "*", "(", ")", "id"};
@@ -79,9 +92,8 @@ int main() {
 
     for (string nt : nonTerminals) {
         cout << "FOLLOW(" << nt << ") = { ";
-        for (auto s : FOLLOW[nt]) cout << s << " ";
-        cout << "}\n";
+        for (string s : FOLLOW[nt]) 
+            cout << s << " ";
+        cout << "}" << endl;
     }
-
-    return 0;
 }
