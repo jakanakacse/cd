@@ -26,9 +26,19 @@ set<string> findFirst(string symbol) {
         }
 
         vector<string> symbols;
-        for (int i = 0; i < prod.size(); i++) {
-            string ch(1, prod[i]);
-            symbols.push_back(ch);
+        string temp;
+        for (int i = 0; i < prod.size(); ++i) {
+            if (prod[i] == ' ') {
+                if (!temp.empty()) {
+                    symbols.push_back(temp);
+                    temp.clear();
+                }
+            } else {
+                temp += prod[i];
+            }
+        }
+        if (!temp.empty()) {
+            symbols.push_back(temp);
         }
 
         bool epsilonInAll = true;
@@ -51,11 +61,11 @@ set<string> findFirst(string symbol) {
 }
 
 int main() {
-    productions["E"]  = {"TE'"};
-    productions["E'"] = {"+TE'", "eps"};
-    productions["T"]  = {"FT'"};
-    productions["T'"] = {"*FT'", "eps"};
-    productions["F"]  = {"(E)", "id"};
+    productions["E"]  = {"T E'"};
+    productions["E'"] = {"+ T E'", "eps"};
+    productions["T"]  = {"F T'"};
+    productions["T'"] = {"* F T'", "eps"};
+    productions["F"]  = {"( E )", "id"};
 
     nonTerminals = {"E", "E'", "T", "T'", "F"};
     terminals = {"+", "*", "(", ")", "id"};
