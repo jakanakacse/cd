@@ -9,34 +9,58 @@ vector<string> terminals = {"id", "+", "*", "(", ")", "$"};
 
 map<string, map<string, string>> parseTable;
 
-set<string> getFirstOfString(const string &alpha) {
+vector<string> splitSymbols(string prod) {
+    vector<string> symbols;
+    string temp;
+    for (char ch : prod) {
+        if (ch == ' ') {
+            if (!temp.empty()) {
+                symbols.push_back(temp);
+                temp.clear();
+            }
+        } else {
+            temp += ch;
+        }
+    }
+    if (!temp.empty()) symbols.push_back(temp);
+    return symbols;
+}
+
+set<string> getFirstOfString(string alpha) {
     set<string> result;
     if (alpha == "eps") {
         result.insert("eps");
         return result;
     }
 
-    for (int i = 0; i < alpha.size(); i++) {
-        string sym(1, alpha[i]);
+    vector<string> symbols = splitSymbols(alpha);
+    bool allEps = true;
+    for (string sym : symbols) {
         if (FIRST.count(sym)) {
             set<string> f = FIRST[sym];
-            for (auto s : f)
+            for (string s : f)
                 if (s != "eps") result.insert(s);
-            if (f.find("eps") == f.end()) break;
+            if (f.find("eps") == f.end()) {
+                allEps = false;
+                break;
+            }
         } else {
             result.insert(sym);
+            allEps = false;
             break;
         }
     }
+    if (allEps)
+        result.insert("eps");
     return result;
 }
 
 int main() {
-    productions["E"]  = {"TE'"};
-    productions["E'"] = {"+TE'", "eps"};
-    productions["T"]  = {"FT'"};
-    productions["T'"] = {"*FT'", "eps"};
-    productions["F"]  = {"(E)", "id"};
+    productions["E"]  = {"T E'"};
+    productions["E'"] = {"+ T E'", "eps"};
+    productions["T"]  = {"F T'"};
+    productions["T'"] = {"* F T'", "eps"};
+    productions["F"]  = {"( E )", "id"};
 
     FIRST["E"]  = {"(", "id"};
     FIRST["E'"] = {"+", "eps"};
@@ -50,17 +74,17 @@ int main() {
     FOLLOW["T'"] = {"+", ")", "$"};
     FOLLOW["F"]  = {"*", "+", ")", "$"};
 
-    for (auto nt : nonTerminals) {
-        for (auto prod : productions[nt]) {
+    for (string nt : nonTerminals) {
+        for (string prod : productions[nt]) {
             set<string> firstSet = getFirstOfString(prod);
 
-            for (auto t : firstSet) {
+            for (string t : firstSet) {
                 if (t != "eps")
                     parseTable[nt][t] = prod;
             }
 
             if (firstSet.find("eps") != firstSet.end()) {
-                for (auto f : FOLLOW[nt]) {
+                for (string f : FOLLOW[nt]) {
                     parseTable[nt][f] = prod;
                 }
             }
@@ -69,12 +93,12 @@ int main() {
 
     cout << "\nLL(1) Parsing Table:\n\n";
     cout << "\t";
-    for (auto t : terminals) cout << t << "\t";
+    for (string t : terminals) cout << t << "\t";
     cout << "\n";
 
-    for (auto nt : nonTerminals) {
+    for (string nt : nonTerminals) {
         cout << nt << "\t";
-        for (auto t : terminals) {
+        for (string t : terminals) {
             if (parseTable[nt].count(t))
                 cout << parseTable[nt][t] << "\t";
             else
