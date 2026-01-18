@@ -9,44 +9,69 @@ map<string, map<string, string>> parseTable;
 vector<string> nonTerminals = {"E", "E'", "T", "T'", "F"};
 vector<string> terminals = {"id", "+", "*", "(", ")", "$"};
 
-set<string> getFirstOfString(const string &alpha) {
+vector<string> splitSymbols(string prod) {
+    vector<string> symbols;
+    string temp;
+    for (char ch : prod) {
+        if (ch == ' ') {
+            if (!temp.empty()) {
+                symbols.push_back(temp);
+                temp.clear();
+            }
+        } else {
+            temp += ch;
+        }
+    }
+    if (!temp.empty()) symbols.push_back(temp);
+    return symbols;
+}
+
+set<string> getFirstOfString(string alpha) {
     set<string> result;
     if (alpha == "eps") { result.insert("eps"); return result; }
 
-    for (int i = 0; i < alpha.size(); i++) {
-        string sym(1, alpha[i]);
+    vector<string> symbols = splitSymbols(alpha);
+    bool allEps = true;
+    for (string sym : symbols) {
         if (FIRST.count(sym)) {
             set<string> f = FIRST[sym];
-            for (auto s : f) if (s != "eps") result.insert(s);
-            if (f.find("eps") == f.end()) break;
+            for (string s : f)
+                if (s != "eps") result.insert(s);
+            if (f.find("eps") == f.end()) {
+                allEps = false;
+                break;
+            }
         } else {
-            result.insert(sym); break;
+            result.insert(sym);
+            allEps = false;
+            break;
         }
     }
+    if (allEps) result.insert("eps");
     return result;
 }
 
 void buildParsingTable() {
-    for (auto nt : nonTerminals) {
-        for (auto prod : productions[nt]) {
+    for (string nt : nonTerminals) {
+        for (string prod : productions[nt]) {
             set<string> firstSet = getFirstOfString(prod);
 
-            for (auto t : firstSet)
+            for (string t : firstSet)
                 if (t != "eps") parseTable[nt][t] = prod;
 
             if (firstSet.find("eps") != firstSet.end()) {
-                for (auto f : FOLLOW[nt]) parseTable[nt][f] = prod;
+                for (string f : FOLLOW[nt]) parseTable[nt][f] = prod;
             }
         }
     }
 }
 
 int main() {
-    productions["E"]  = {"TE'"};
-    productions["E'"] = {"+TE'", "eps"};
-    productions["T"]  = {"FT'"};
-    productions["T'"] = {"*FT'", "eps"};
-    productions["F"]  = {"(E)", "id"};
+    productions["E"]  = {"T E'"};
+    productions["E'"] = {"+ T E'", "eps"};
+    productions["T"]  = {"F T'"};
+    productions["T'"] = {"* F T'", "eps"};
+    productions["F"]  = {"( E )", "id"};
 
     FIRST["E"]  = {"(", "id"};
     FIRST["E'"] = {"+", "eps"};
@@ -71,13 +96,25 @@ int main() {
     st.push("E");
 
     int index = 0;
-    string a = string(1, input[index]);
 
     cout << "\nParsing Steps:\n";
 
     while (!st.empty()) {
         string X = st.top();
-        a = string(1, input[index]);
+
+        string a;
+        bool matched = false;
+        for (string t : terminals) {
+            if (input.substr(index, t.size()) == t) {
+                a = t;
+                matched = true;
+                break;
+            }
+        }
+        if (!matched) {
+            cout << "Error! Unknown input symbol.\n";
+            break;
+        }
 
         cout << "Stack top: " << X << ", Input symbol: " << a << "\n";
 
@@ -86,13 +123,14 @@ int main() {
             break;
         } else if (X == a) {
             st.pop();
-            index++;
+            index += a.size();
         } else if (parseTable[X].count(a)) {
             st.pop();
             string prod = parseTable[X][a];
             if (prod != "eps") {
-                for (int i = prod.size() - 1; i >= 0; i--)
-                    st.push(string(1, prod[i]));
+                vector<string> symbols = splitSymbols(prod);
+                for (int i = symbols.size() - 1; i >= 0; i--)
+                    st.push(symbols[i]);
             }
         } else {
             cout << "Error! String Rejected.\n";
