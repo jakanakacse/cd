@@ -10,6 +10,23 @@ bool isTerminal(string s) {
     return terminals.count(s);
 }
 
+vector<string> splitSymbols(string prod) {
+    vector<string> symbols;
+    string temp;
+    for (char ch : prod) {
+        if (ch == ' ') {
+            if (!temp.empty()) {
+                symbols.push_back(temp);
+                temp.clear();
+            }
+        } else {
+            temp += ch;
+        }
+    }
+    if (!temp.empty()) symbols.push_back(temp);
+    return symbols;
+}
+
 set<string> findFirst(string symbol) {
     if (isTerminal(symbol)) {
         return {symbol};
@@ -25,21 +42,7 @@ set<string> findFirst(string symbol) {
             continue;
         }
 
-        vector<string> symbols;
-        string temp;
-        for (int i = 0; i < prod.size(); ++i) {
-            if (prod[i] == ' ') {
-                if (!temp.empty()) {
-                    symbols.push_back(temp);
-                    temp.clear();
-                }
-            } else {
-                temp += prod[i];
-            }
-        }
-        if (!temp.empty()) {
-            symbols.push_back(temp);
-        }
+        vector<string> symbols = splitSymbols(prod);
 
         bool epsilonInAll = true;
 
@@ -73,7 +76,7 @@ int main() {
     for (string nt : nonTerminals) {
         set<string> firstSet = findFirst(nt);
         cout << "FIRST(" << nt << ") = { ";
-        for (auto x : firstSet) cout << x << " ";
+        for (string x : firstSet) cout << x << " ";
         cout << "}" << endl;
     }
     return 0;
